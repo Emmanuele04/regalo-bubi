@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuore per Te ❤️</title>
+    <!-- Carica Tailwind CSS per uno stile responsivo e moderno --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carica Three.js per la grafica 3D --><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* Imposta il font Inter per l'estetica moderna */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden; /* Nasconde le barre di scorrimento */
+            background-color: #1a1a2e; /* Sfondo scuro elegante */
+            color: #ffffff;
+        }
+        /* Il contenitore 3D coprirà l'intero schermo */
+        #container3D {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* L'overlay 2D è sopra il 3D */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none; /* Permette il click passante se necessario */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Contenitore per la scena 3D (il cuore) --><div id="container3D"></div>
+
+    <!-- Overlay 2D per il timer e il messaggio --><div id="overlay" class="flex flex-col items-center justify-center p-6 text-center">
+        <!-- Il messaggio personalizzato, sempre centrato --><h1 id="custom-message" class="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-4 drop-shadow-lg" style="text-shadow: 0 0 10px rgba(186, 85, 211, 0.7);">
+            <!-- Messaggio inserito tramite JavaScript --></h1>
+
+        <!-- Il timer che mostra il tempo trascorso --><div id="timer-display" class="bg-purple-600/80 backdrop-blur-sm p-4 sm:p-6 rounded-3xl shadow-2xl transition duration-500 transform hover:scale-105">
+            <p class="text-xs sm:text-sm font-medium uppercase opacity-80 mb-2">Insieme da:</p>
+            <p id="timer" class="text-2xl sm:text-4xl lg:text-5xl font-mono font-bold tracking-tighter"></p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================================
+        // CONFIGURAZIONE CHIAVE: MODIFICA QUESTE VARIABILI!
+        // ==========================================================
+
+        /**
+         * 1. La data esatta in cui vi siete messi insieme (formato: Anno-Mese-Giorno Ore:Minuti:Secondi).
+         * Esempio: 2024-02-14 20:30:00 (14 Febbraio 2024, 20:30)
+         * NOTA: I mesi vanno da 01 a 12 (Gennaio=01, Febbraio=02, ecc.)
+         */
+        const startDateString = "2025-02-22 02:00:00"; // DATA INSERITA DALL'UTENTE
+        const relationshipStartDate = new Date(startDateString);
+
+        /**
+         * 2. Il messaggio d'amore da mostrare al centro.
+         * NOTA: Utilizza il tag HTML <br> per andare a capo.
+         */
+        const message = "Rendi ogni mio giorno felice<br>Ti amo per sempre<br>Auguri amore mio!"; // MESSAGGIO AGGIORNATO
+        
+        // ==========================================================
+        // LOGICA DEL TIMER
+        // ==========================================================
+
+        // INVECE DI usare textContent, usiamo innerHTML per interpretare il tag <br>
+        document.getElementById('custom-message').innerHTML = message; 
+        const timerElement = document.getElementById('timer');
+
+        function updateTimer() {
+            const now = new Date();
+            const elapsed = now.getTime() - relationshipStartDate.getTime();
+
+            if (elapsed < 0) {
+                timerElement.textContent = "Data d'inizio non ancora raggiunta!";
+                return;
+            }
+
+            const totalSeconds = Math.floor(elapsed / 1000);
+
+            // Calcola Giorni, Ore, Minuti, Secondi
+            const seconds = totalSeconds % 60;
+            const minutes = Math.floor(totalSeconds / 60) % 60;
+            const hours = Math.floor(totalSeconds / 3600) % 24;
+            const days = Math.floor(totalSeconds / (3600 * 24));
+
+            // Formatta il tempo
+            const formattedTime =
+                `${days} giorni, ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            timerElement.textContent = formattedTime;
+        }
+
+        // Aggiorna il timer ogni secondo
+        setInterval(updateTimer, 1000);
+        updateTimer(); // Esegui subito per evitare un ritardo di 1s
+
+        // ==========================================================
+        // LOGICA DELLA SCENA 3D (THREE.JS)
+        // ==========================================================
+
+        const container = document.getElementById('container3D');
+        let scene, camera, renderer, heart, light, particles;
+        const clock = new THREE.Clock(); // Necessario per gli effetti basati sul tempo
+
+        function init3D() {
+            // 1. Scena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e); // Stesso colore dello sfondo
+
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // 4. Luce
+            light = new THREE.DirectionalLight(0xffffff, 3);
+            light.position.set(1, 1, 1).normalize();
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0xaaaaaa, 1.5)); // Luce ambientale per morbidezza
+
+            // 5. Creazione del Cuore 3D
+            const x = 0, y = 0;
+            const heartShape = new THREE.Shape();
+
+            // Disegna la forma di un cuore 2D (algoritmo standard del cuore)
+            heartShape.moveTo(x + 0.5, y + 0.5);
+            heartShape.bezierCurveTo(x + 0.5, y + 0.5, x + 0.4, y, x, y);
+            heartShape.bezierCurveTo(x - 0.6, y, x - 0.6, y + 0.7, x - 0.6, y + 0.7);
+            heartShape.bezierCurveTo(x - 0.6, y + 1.1, x - 0.3, y + 1.54, x + 0.5, y + 1.9);
+            heartShape.bezierCurveTo(x + 1.3, y + 1.54, x + 1.6, y + 1.1, x + 1.6, y + 0.7);
+            heartShape.bezierCurveTo(x + 1.6, y + 0.7, x + 1.6, y, x + 1.0, y);
+            heartShape.bezierCurveTo(x + 0.85, y, x + 0.5, y + 0.5, x + 0.5, y + 0.5);
+
+            // Estrudi la forma 2D per renderla 3D (HeartGeometry)
+            const extrudeSettings = {
+                depth: 0.5,
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 2,
+                bevelSize: 0.1,
+                bevelThickness: 0.1
+            };
+            const geometry = new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
+
+            // Centra la geometria
+            geometry.center();
+
+            // Materiale del cuore (un viola vibrante e lucido)
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x8A2BE2, // Blu Viola (Viola reale)
+                specular: 0xffffff, // Lucentezza bianca
+                shininess: 100, // Alto grado di brillantezza
+                emissive: 0x4B0082, // Un viola scuro per l'emissive
+                emissiveIntensity: 0.5
+            });
+
+            heart = new THREE.Mesh(geometry, material);
+
+            // Scaliamo e posizioniamo il cuore per adattarlo alla vista mobile
+            const heartScale = 2.0; // Scala iniziale
+            heart.scale.set(heartScale, heartScale, heartScale);
+
+            scene.add(heart);
+
+            // 6. Aggiungi Particelle (Effetto Campo Stellare)
+            createParticles();
+
+            // Gestione del ridimensionamento della finestra
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function createParticles() {
+            const particleCount = 1000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+
+            // Colore delle particelle (un viola/bianco chiaro)
+            const particleColor = new THREE.Color(0xdadaff);
+
+            for (let i = 0; i < particleCount; i++) {
+                // Posizioni casuali in uno spazio 3D
+                const x = (Math.random() - 0.5) * 200;
+                const y = (Math.random() - 0.5) * 200;
+                const z = (Math.random() - 0.5) * 200;
+                positions.push(x, y, z);
+
+                // Aggiungi colore
+                colors.push(particleColor.r, particleColor.g, particleColor.b);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.15, // Dimensione dei "punti"
+                vertexColors: true,
+                blending: THREE.AdditiveBlending, // Rende le particelle più luminose
+                transparent: true,
+                opacity: 0.7
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+
+        function onWindowResize() {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // Loop di Animazione
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime(); // Tempo trascorso dall'avvio
+
+            // 1. Rotazione del cuore
+            if (heart) {
+                heart.rotation.x += 0.005;
+                heart.rotation.y += 0.005;
+                heart.rotation.z += 0.003;
+
+                // 2. Effetto Pulsazione (Heartbeat)
+                // Usa la funzione seno per una pulsazione fluida e ciclica (periodo di 2 secondi)
+                const pulse = 1.0 + Math.sin(elapsedTime * 2) * 0.08; // Variazione 8%
+                heart.scale.set(pulse * 2.0, pulse * 2.0, pulse * 2.0);
+            }
+
+            // 3. Movimento leggero delle particelle
+            if (particles) {
+                particles.rotation.y += 0.0005;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Avvia la scena 3D solo quando il DOM è pronto
+        window.onload = function () {
+            init3D();
+            animate();
+        }
+
+    </script>
+</body>
+</html>
